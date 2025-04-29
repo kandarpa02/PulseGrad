@@ -7,7 +7,7 @@ class TanH:
     def __call__(self, pulse_obj):
         x = pulse_obj.data
         th = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
-        out = pulse(th, (pulse_obj, ), 'tanh', compute_grad=True if pulse_obj.compute_grad==True else False)
+        out = pulse(th, (pulse_obj, ), 'tanh', compute_grad=True)
         
         def _back():
             if pulse_obj.compute_grad == True:
@@ -23,7 +23,7 @@ class ReLU:
     def __call__(self, pulse_obj):
         x = pulse_obj.data
         rlu = np.maximum(x, 0)
-        out = pulse(rlu, (pulse_obj, ), 'relu', compute_grad=True if pulse_obj.compute_grad==True else False)
+        out = pulse(rlu, (pulse_obj, ), 'relu', compute_grad=True)
 
         def _back():
             if pulse_obj.compute_grad == True:
@@ -40,7 +40,7 @@ class Sigmoid:
         if isinstance(pulse_obj.data, list):
             pulse_obj.data = np.array(pulse_obj.data)
         sig = 1/(1 + np.exp(-pulse_obj.data))
-        out = pulse(sig, (pulse_obj,), 'sigmoid', compute_grad= True if pulse_obj.compute_grad == True else False)
+        out = pulse(sig, (pulse_obj,), 'sigmoid', compute_grad= True)
 
         def _back():
             if pulse_obj.compute_grad == True:
@@ -62,7 +62,7 @@ class Softmax:
             sum_exps = np.sum(exps, axis=axis, keepdims=True)
             softmax_output = exps / sum_exps
     
-            out = pulse(softmax_output, (pulse_obj,), 'softmax', compute_grad= True if pulse_obj.compute_grad == True else False)
+            out = pulse(softmax_output, (pulse_obj,), 'softmax', compute_grad= True)
     
             def _back():
                 if pulse_obj.compute_grad == True:
@@ -103,7 +103,7 @@ class BCELoss():
         clipped_pred = np.clip(pred, eps, 1. - eps)
 
         loss_val = -(np.log(clipped_pred) + (1-np.array(target.data)) * np.log(1 - clipped_pred))
-        out = pulse(loss_val, (logits, target), 'binary_crossentropy', compute_grad= True if logits.compute_grad == True else False)
+        out = pulse(loss_val, (logits, target), 'binary_crossentropy', compute_grad= True)
 
         def _back():
             if logits.compute_grad == True:
@@ -142,7 +142,7 @@ class CrossEntropyLoss:
         clipped_pred = np.clip(pred, eps, 1. - eps)
 
         loss_val = -np.sum(target.data * np.log(clipped_pred)) / logits.size[0]
-        out = pulse(loss_val, (logits, target), 'crossentropy', compute_grad= True if logits.compute_grad == True else False)
+        out = pulse(loss_val, (logits, target), 'crossentropy', compute_grad= True)
 
         def _back():
             if logits.compute_grad == True:
