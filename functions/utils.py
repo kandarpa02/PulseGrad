@@ -116,7 +116,7 @@ class CrossEntropyLoss:
     def __init__(self):
         pass
 
-    def __call__(self, logits, target):
+    def __call__(self, logits, target): # pass logits not softmax values
         
         if not isinstance(logits, pulse) or not isinstance(target, pulse):
             raise TypeError("Inputs must be pulse vectors! please check your inputs!.")
