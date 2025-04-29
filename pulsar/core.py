@@ -52,24 +52,23 @@ class pulse:
         out = pulse(self.data + other.data, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
 
         def _back():
-            grad_self = out.gradient
-            grad_other = out.gradient
+            grad = out.gradient
 
-            if self.gradient.shape != out.gradient.shape:
-                axes = tuple(range(out.gradient.ndim - self.gradient.ndim))
-                grad_self = grad_self.sum(axis=axes, keepdims=True)
-
-            if other.gradient.shape != out.gradient.shape:
-                axes = tuple(range(out.gradient.ndim - other.gradient.ndim))
-                grad_other = grad_other.sum(axis=axes, keepdims=True)
-
-            if self.compute_grad == True:
+            if self.compute_grad:
+                grad_self = grad
+                if self.gradient.shape != grad.shape:
+                    grad_self = grad.sum(axis=tuple(i for i, (s, g) in enumerate(zip(self.gradient.shape, grad.shape)) if s == 1 and g != 1), keepdims=True)
                 self.gradient += grad_self
-            if other.compute_grad == True:
+
+            if other.compute_grad:
+                grad_other = grad
+                if other.gradient.shape != grad.shape:
+                    grad_other = grad.sum(axis=tuple(i for i, (s, g) in enumerate(zip(other.gradient.shape, grad.shape)) if s == 1 and g != 1), keepdims=True)
                 other.gradient += grad_other
 
         out._back = _back
         return out
+
  
     def __mul__(self, other):
         out = pulse(self.data * other.data, (self, other), '*', compute_grad= True if self.compute_grad == True else False)
