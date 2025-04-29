@@ -49,26 +49,25 @@ class pulse:
 
 
     def __add__(self, other):
-        out = pulse(self.data + other.data, (self, other), '+', compute_grad= True if self.compute_grad == True else False)
+        out = pulse(self.data + other.data, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
 
         def _back():
+            grad_self = out.gradient
+            grad_other = out.gradient
+
+            if self.gradient.shape != out.gradient.shape:
+                axes = tuple(range(out.gradient.ndim - self.gradient.ndim))
+                grad_self = grad_self.sum(axis=axes, keepdims=True)
+
+            if other.gradient.shape != out.gradient.shape:
+                axes = tuple(range(out.gradient.ndim - other.gradient.ndim))
+                grad_other = grad_other.sum(axis=axes, keepdims=True)
+
             if self.compute_grad == True:
-                grad_self = out.gradient
-                grad_other = out.gradient
-
-                if self.gradient.shape != out.gradient.shape:
-                    axes = tuple(range(out.gradient.ndim - self.gradient.ndim))
-                    grad_self = grad_self.sum(axis=axes, keepdims=True)
-
-                if other.gradient.shape != out.gradient.shape:
-                    axes = tuple(range(out.gradient.ndim - other.gradient.ndim))
-                    grad_other = grad_other.sum(axis=axes, keepdims=True)
-
                 self.gradient += grad_self
+            if other.compute_grad == True:
                 other.gradient += grad_other
 
-            else:
-                raise ValueError("Please activate your Sharingan! you did not set 'compute_grad = True' before backprop")
         out._back = _back
         return out
  
