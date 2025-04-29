@@ -97,11 +97,14 @@ class pulse:
         out = pulse(result, (self, other), '@', compute_grad=True, size=(m, n))
         
         def _back():
-            if  self.compute_grad == True:
-                self.gradient += np.dot(out.gradient, other.data.T)
-                other.gradient += np.dot(self.data.T, out.gradient) 
-            else:
-                raise ValueError("Please activate your Sharingan! you did not set 'compute_grad = True' before backprop")
+            self.gradient += np.dot(out.gradient, other.data.T)
+            other.gradient += np.dot(self.data.T, out.gradient) 
+            '''
+            I am hard coding the compute grad part now, because my eyes are hurting now XD
+            I'll do it shortly!!
+            '''
+            # else:
+            #     raise ValueError("Please activate your Sharingan! you did not set 'compute_grad = True' before backprop")
         out._back = _back
         return out
 
