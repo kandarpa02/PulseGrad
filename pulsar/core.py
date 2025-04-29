@@ -53,8 +53,20 @@ class pulse:
 
         def _back():
             if self.compute_grad == True:
-                self.gradient += 1.0 * out.gradient
-                other.gradient += 1.0 * out.gradient
+                grad_self = out.gradient
+                grad_other = out.gradient
+
+                if self.gradient.shape != out.gradient.shape:
+                    axes = tuple(range(out.gradient.ndim - self.gradient.ndim))
+                    grad_self = grad_self.sum(axis=axes, keepdims=True)
+
+                if other.gradient.shape != out.gradient.shape:
+                    axes = tuple(range(out.gradient.ndim - other.gradient.ndim))
+                    grad_other = grad_other.sum(axis=axes, keepdims=True)
+
+                self.gradient += grad_self
+                other.gradient += grad_other
+
             else:
                 raise ValueError("Please activate your Sharingan! you did not set 'compute_grad = True' before backprop")
         out._back = _back
