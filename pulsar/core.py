@@ -94,7 +94,7 @@ class pulse:
             raise ValueError(f"Uhh Vibes didn't match!! :( please check the dimensions ( ,{k}) != ({k_}, )")
         
         result = np.dot(self.data, other.data)
-        out = pulse(result, (self, other), '@', compute_grad=True if self.compute_grad else False, size=(m, n))
+        out = pulse(result, (self, other), '@', compute_grad=True if self.compute_grad == True else False, size=(m, n))
         
         def _back():
             if  self.compute_grad == True:
