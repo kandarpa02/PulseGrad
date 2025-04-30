@@ -100,8 +100,8 @@ class pulse:
             self.gradient += np.dot(out.gradient, other.data.T)
             other.gradient += np.dot(self.data.T, out.gradient) 
             '''
-            I am hard coding the compute grad part now, because my eyes are hurting now XD
-            I'll do it shortly!!
+            I am hard coding the compute grad part now, because my eyes are hurting XD
+            I'll fix it shortly, although it is completely functional right now!!
             '''
             # else:
             #     raise ValueError("Please activate your Sharingan! you did not set 'compute_grad = True' before backprop")
