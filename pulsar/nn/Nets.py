@@ -10,6 +10,9 @@ class Linear:
         self.out_features = out_features
         self.weight = c.pulse(np.random.randn(self.in_features, self.out_features) * 0.01, compute_grad=True)
         self.bias = c.pulse(np.zeros((1, self.out_features)), compute_grad=True)
+        
+    def __str__(self):
+        return f"{self.__class__.__name__}(in={self.in_features}, out={self.out_features})"
 
     def __call__(self, x):
         if not isinstance(x, c.pulse):
@@ -52,6 +55,9 @@ class Conv2D:
         )
         self.bias = c.pulse(np.zeros((out_channels, 1)), compute_grad=True)
 
+    def __str__(self):
+        return f"{self.__class__.__name__}(in={self.in_channels}, out={self.out_channels}, kernel_size={self.kernel_size})"
+
     def __call__(self, x):
         if not isinstance(x, c.pulse):
             x = c.pulse(x, compute_grad=True)
@@ -84,6 +90,9 @@ class MaxPool2D:
     def __init__(self, kernel_size=2, stride=2):
         self.kernel_size = kernel_size
         self.stride = stride
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(in={self.in_channels}, kernel_size={self.kernel_size}, stride={self.stride})"
 
     def __call__(self, x):
         if not isinstance(x, c.pulse):
