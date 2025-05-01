@@ -2,7 +2,7 @@ import numpy as np
 
 class pulse:
     def __init__(self, data, _children=[], op='', compute_grad = False, size = 1):
-        self.data = data
+        self.data = np.array(data) if isinstance(data, list) else data
         self.size = (len(self.data), len(self.data[0])) if isinstance(self.data, (list, np.ndarray)) else size
         self.gradient = np.zeros_like(self.data, dtype=np.float32) if isinstance(self.data, (list, np.ndarray)) else 0
 
