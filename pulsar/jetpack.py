@@ -16,8 +16,8 @@ class Jet:
         
         for i in range(len(self.modules)):
             try:
-                params[f'{self.modules[i].__class__.__name__}{i}_weight'] = self.modules[i].weight
-                params[f'{self.modules[i].__class__.__name__}{i}_bias'] = self.modules[i].bias
+                params[f'{self.modules[i].__class__.__name__}{i}_weight'] = self.modules[i].weight.data
+                params[f'{self.modules[i].__class__.__name__}{i}_bias'] = self.modules[i].bias.data
                     
             except AttributeError:
                 pass
