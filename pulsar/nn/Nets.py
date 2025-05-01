@@ -24,14 +24,15 @@ class Linear:
         return z
 
 class flat:
-    def __init__(self):
+    def __init__(self, compute_grad = False):
+        self.compute_grad = compute_grad
         pass
 
     def __call__(self, x):
         x_data = x.data if isinstance(x.data, np.ndarray) else np.asarray(x.data)
         
         N = x_data.shape[0]
-        x = c.pulse(x_data.reshape(N, -1), compute_grad=x.compute_grad)
+        x = c.pulse(x_data.reshape(N, -1), compute_grad=self.compute_grad)
         
         return x
 
