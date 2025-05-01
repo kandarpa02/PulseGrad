@@ -23,6 +23,13 @@ class Linear:
 
         return z
 
+class flat:
+    def __init__(self):
+        pass
+    def __call__(self, x):
+        N = x.data.shape[0]
+        x = x.__class__(x.data.reshape(N, -1), compute_grad=x.compute_grad)
+
 
 def im2col(x_data, kH, kW, s, H_out, W_out):
     N, C, H, W = x_data.shape
