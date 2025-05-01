@@ -24,13 +24,13 @@ class Jet:
 
         return params
     
-    def load_weights_only(self, path:str):
+    def load_weights(self, path:str):
         loaded = np.load(path)
         for name, param in self.param().items():
             param.data = loaded[name]
 
 
-    def save_weights_only(self, path:str):
+    def save_weights(self, path:str):
         np.savez(path, **{k: v.data for k, v in self.param().items()})
 
 
