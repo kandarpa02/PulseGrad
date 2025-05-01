@@ -5,7 +5,7 @@ import numpy as np
 class Jet:
     def __init__(self, modules: list):
         self.modules = modules
-
+        self.parameters = {k:v.data for k,v in self.param().items()}
     def __call__(self, x):
         for module in self.modules:
             x = module(x)
@@ -16,8 +16,8 @@ class Jet:
         
         for i in range(len(self.modules)):
             try:
-                params[f'{self.modules[i].__class__.__name__}{i}_weight'] = self.modules[i].weight.data
-                params[f'{self.modules[i].__class__.__name__}{i}_bias'] = self.modules[i].bias.data
+                params[f'{self.modules[i].__class__.__name__}{i}_weight'] = self.modules[i].weight
+                params[f'{self.modules[i].__class__.__name__}{i}_bias'] = self.modules[i].bias
                     
             except AttributeError:
                 pass
