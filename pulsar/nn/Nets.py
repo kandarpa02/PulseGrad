@@ -26,10 +26,15 @@ class Linear:
 class flat:
     def __init__(self):
         pass
+
     def __call__(self, x):
-        N = x.data.shape[0]
-        x = c.pulse(x.data.reshape(N, -1), compute_grad=x.compute_grad)
+        x_data = x.data if isinstance(x.data, np.ndarray) else np.asarray(x.data)
+        
+        N = x_data.shape[0]
+        x = c.pulse(x_data.reshape(N, -1), compute_grad=x.compute_grad)
+        
         return x
+
 
 def im2col(x_data, kH, kW, s, H_out, W_out):
     N, C, H, W = x_data.shape
