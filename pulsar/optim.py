@@ -2,7 +2,7 @@ import numpy as np
 import pulsar.core as c
 class AdamOptimizer:
     def __init__(self, parameters, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
-        self.parameters = c.pulse(param for param in parameters) if not isinstance(parameters, c.pulse) else parameters
+        self.parameters = parameters
         self.lr = lr
         self.beta1 = beta1  
         self.beta2 = beta2 
