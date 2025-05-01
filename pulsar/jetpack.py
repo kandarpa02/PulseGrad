@@ -23,7 +23,7 @@ class Jet:
                 pass
 
         return params
-        
+    
     def __repr__(self):
         print("Jetpack summary:\n")
         
