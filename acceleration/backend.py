@@ -14,6 +14,7 @@ def set_backend(cuda:bool = False):
     _np = cp if use_cuda else __import__('numpy')
     ndarray = _np.ndarray
     print(f"[Backend] Using {'CuPy (GPU)' if use_cuda else 'NumPy (CPU)'}")
+
 def array(data): return _np.array(data)
 def asarray(data): return _np.asarray(data)
 def zeros(shape): return _np.zeros(shape)
@@ -34,3 +35,9 @@ def repeat(x, repeats, axis=None): return _np.repeat(x, repeats, axis=axis)
 def tile(x, reps): return _np.tile(x, reps)
 def sqrt(x): return _np.sqrt(x)
 def einsum(subscripts, *operands): return _np.einsum(subscripts, *operands)
+
+ndarray = _np.ndarray
+float32 = _np.float32
+
+def to_numpy(x): return x.get() if use_cuda else x
+def to_cupy(x): return cp.asarray(x) if has_cupy else x
