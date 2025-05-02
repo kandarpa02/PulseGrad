@@ -1,12 +1,15 @@
 import pulseEngine.nn.Nets as net
-import pulseEngine.pulsar as c
+import pulseEngine.pulsar as p
 import numpy as np
 
 class Jet:
-    def __init__(self, modules: list):
+    def __init__(self, cuda:bool, modules:list):
+        self.cuda = cuda
         self.modules = modules
         self.parameters = {k:v.data for k,v in self.param().items()}
+
     def __call__(self, x):
+        x = p.pulse(x).cuda() if self.cuda == True else p.pulse(x).cpu()
         for module in self.modules:
             x = module(x)
         return x
