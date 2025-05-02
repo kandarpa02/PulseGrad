@@ -1,5 +1,5 @@
-import pulseG.nn.Nets as net
-import pulseG.pulsar as c
+import pulseEngine.nn.Nets as net
+import pulseEngine.pulsar as c
 import numpy as np
 
 class Jet:

@@ -1,4 +1,4 @@
-from pulseG.pulsar import pulse
+from pulseEngine.pulsar import pulse
 import numpy as np
 
 class TanH:
