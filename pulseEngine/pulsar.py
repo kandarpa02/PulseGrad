@@ -139,8 +139,9 @@ class pulse:
         return out
         
     def __matmul__(self, other):
-        if not isinstance(self.data, B.ndarray):
+        if not hasattr(self.data, 'shape'):
             self.data = B.array(self.data)
+        if not hasattr(other.data, 'shape'):
             other.data = B.array(other.data)
             
         m, k = self.data.shape 
