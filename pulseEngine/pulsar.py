@@ -153,8 +153,8 @@ class pulse:
         out = pulse(result, (self, other), '@', compute_grad=True, shape=(m, n))
         
         def _back():
-            self.gradient += B.dot(out.gradient, other.data.T)
-            other.gradient += B.dot(self.data.T, out.gradient) 
+            self.gradient += B.matmul(out.gradient, other.data.T)
+            other.gradient += B.matmul(self.data.T, out.gradient) 
             '''
             I am hard coding the compute grad part now, because my eyes are hurting XD
             I'll fix it shortly, although it is completely functional right now!!
