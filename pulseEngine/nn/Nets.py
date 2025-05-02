@@ -1,18 +1,18 @@
-import pulseEngine.pulsar as c
+import pulseEngine.pulsar as p
 import acceleration.backend as B
 
 class Linear:
     def __init__(self, in_features, out_features):
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = c.pulse(B.random.randn(self.in_features, self.out_features) * 0.01, compute_grad=True)
-        self.bias = c.pulse(B.zeros((1, self.out_features)), compute_grad=True)
+        self.weight = p.pulse(B.randn(self.in_features, self.out_features) * 0.01, compute_grad=True)
+        self.bias = p.pulse(B.zeros((1, self.out_features)), compute_grad=True)
     def __str__(self):
         return f"{self.__class__.__name__}(in={self.in_features}, out={self.out_features})"
 
     def __call__(self, x):
-        if not isinstance(x, c.pulse):
-            x = c.pulse(x)
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x)
 
         y = x @ self.weight
         z = y + self.bias  
@@ -28,7 +28,7 @@ class flat:
         x_data = x.data if isinstance(x.data, B.ndarray) else B.asarray(x.data)
         
         N = x_data.shape[0]
-        x = c.pulse(x_data.reshape(N, -1), compute_grad=self.compute_grad)
+        x = p.pulse(x_data.reshape(N, -1), compute_grad=self.compute_grad)
         
         return x
 
@@ -58,18 +58,18 @@ class Conv2D:
         self.padding = padding
 
         kH, kW = self.kernel_size
-        self.weight = c.pulse(
-            B.random.randn(out_channels, in_channels, kH, kW) * B.sqrt(2 / (in_channels * kH * kW)),
+        self.weight = p.pulse(
+            B.randn(out_channels, in_channels, kH, kW) * B.sqrt(2 / (in_channels * kH * kW)),
             compute_grad=True
         )
-        self.bias = c.pulse(B.zeros((out_channels, 1)), compute_grad=True)
+        self.bias = p.pulse(B.zeros((out_channels, 1)), compute_grad=True)
 
     def __str__(self):
         return f"{self.__class__.__name__}(in={self.in_channels}, out={self.out_channels}, kernel_size={self.kernel_size})"
 
     def __call__(self, x):
-        if not isinstance(x, c.pulse):
-            x = c.pulse(x, compute_grad=True)
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x, compute_grad=True)
 
         N, C, H, W = x.data.shape
         kH, kW = self.kernel_size
@@ -78,7 +78,7 @@ class Conv2D:
 
         if p > 0:
             x_data = B.pad(x.data, ((0, 0), (0, 0), (p, p), (p, p)), mode='constant')
-            x = c.pulse(x_data, (x,), 'pad', compute_grad=x.compute_grad)
+            x = p.pulse(x_data, (x,), 'pad', compute_grad=x.compute_grad)
         else:
             x_data = x.data
 
@@ -92,7 +92,7 @@ class Conv2D:
         out = out.reshape(N, self.out_channels, H_out, W_out)
         out += self.bias.data.reshape(1, -1, 1, 1)
 
-        return c.pulse(out, (x, self.weight, self.bias), 'conv', compute_grad=True)
+        return p.pulse(out, (x, self.weight, self.bias), 'conv', compute_grad=True)
 
 
 class MaxPool2D:
@@ -104,8 +104,8 @@ class MaxPool2D:
         return f"{self.__class__.__name__}(in={self.in_channels}, kernel_size={self.kernel_size}, stride={self.stride})"
 
     def __call__(self, x):
-        if not isinstance(x, c.pulse):
-            x = c.pulse(x, compute_grad=True)
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x, compute_grad=True)
 
         N, C, H, W = x.data.shape
         k = self.kernel_size
@@ -124,6 +124,6 @@ class MaxPool2D:
                 window = x.data[:, :, h_start:h_end, w_start:w_end]
                 out[:, :, i, j] = B.max(window, axis=(2, 3))
 
-        return c.pulse(out, (x,), 'maxpool', compute_grad=False)
+        return p.pulse(out, (x,), 'maxpool', compute_grad=False)
 
 
