@@ -141,13 +141,13 @@ class CrossEntropyLoss:
         eps = 1e-12
         clipped_pred = np.clip(pred, eps, 1. - eps)
 
-        loss_val = -np.sum(target.data * np.log(clipped_pred)) / logits.size[0]
+        loss_val = -np.sum(target.data * np.log(clipped_pred)) / logits.shape[0]
         out = pulse(loss_val, (logits, target), 'crossentropy', compute_grad= True)
 
         def _back():
             if logits.compute_grad == True:
                 logits.gradient += pred - target.data
-                logits.gradient /= logits.size[0]
+                logits.gradient /= logits.shape[0]
 
         out._back = _back
         return out
