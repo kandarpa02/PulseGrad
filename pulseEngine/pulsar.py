@@ -140,8 +140,8 @@ class pulse:
         
     def __matmul__(self, other):
         if not isinstance(self.data, B.ndarray):
-            self.data = B.array(self.data, dtype= B.float32)
-            other.data = B.array(other.data, dtype= B.float32)
+            self.data = B.array(self.data)
+            other.data = B.array(other.data)
             
         m, k = self.data.shape 
         k_, n = other.data.shape
