@@ -1,4 +1,4 @@
-import numpy as np
+import acceleration.backend as B
 import pulseG.pulsar as c
 class AdamOptimizer:
     def __init__(self, parameters, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
@@ -8,8 +8,8 @@ class AdamOptimizer:
         self.beta2 = beta2 
         self.epsilon = epsilon  
 
-        self.m = [np.zeros_like(param) for param in parameters] 
-        self.v = [np.zeros_like(param) for param in parameters] 
+        self.m = [B.zeros_like(param) for param in parameters] 
+        self.v = [B.zeros_like(param) for param in parameters] 
         self.t = 0 
 
     def run(self):
@@ -22,9 +22,9 @@ class AdamOptimizer:
             m_hat = self.m[i] / (1 - self.beta1 ** self.t)
             v_hat = self.v[i] / (1 - self.beta2 ** self.t)
 
-            param.data -= self.lr * m_hat / (np.sqrt(v_hat) + self.epsilon)
+            param.data -= self.lr * m_hat / (B.sqrt(v_hat) + self.epsilon)
 
     def clean(self):
         """Clears the gradients of all parameters."""
         for param in self.parameters:
-            param.gradient = np.zeros_like(param.data)
+            param.gradient = B.zeros_like(param.data)
