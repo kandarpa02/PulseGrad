@@ -1,10 +1,10 @@
 import setuptools
 import platform
 
-cupy_version = "cupy>=12.0.0" 
+cupy_version = "cupy-cuda120>=12.0.0" 
 
 if platform.system() == "Linux":
-    cupy_version = "cupy>=12.0.0"
+    cupy_version = "cupy-cuda120>=12.0.0"
 
 setuptools.setup(
     name="PulseGrad",
