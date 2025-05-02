@@ -139,31 +139,25 @@ class pulse:
         return out
         
     def __matmul__(self, other):
-        if not hasattr(self.data, 'shape'):
-            self.data = B.array(self.data)
-        if not hasattr(other.data, 'shape'):
-            other.data = B.array(other.data)
-            
-        m, k = self.data.shape 
-        k_, n = other.data.shape
+        self_data = B.asarray(self.data)
+        other_data = B.asarray(other.data)
 
-        if k!=k_:
+        m, k = self_data.shape
+        k_, n = other_data.shape
+
+        if k != k_:
             raise ValueError(f"Uhh Vibes didn't match!! :( please check the dimensions ( ,{k}) != ({k_}, )")
-        
-        result = B.matmul(self.data, other.data)
+
+        result = B.matmul(self_data, other_data)
         out = pulse(result, (self, other), '@', compute_grad=True, shape=(m, n))
-        
+
         def _back():
-            self.gradient += B.matmul(out.gradient, other.data.T)
-            other.gradient += B.matmul(self.data.T, out.gradient) 
-            '''
-            I am hard coding the compute grad part now, because my eyes are hurting XD
-            I'll fix it shortly, although it is completely functional right now!!
-            '''
-            # else:
-            #     raise ValueError("Please activate your Sharingan! you did not set 'compute_grad = True' before backprop")
+            self.gradient += B.matmul(out.gradient, B.asarray(other.data).T)
+            other.gradient += B.matmul(B.asarray(self.data).T, out.gradient)
+
         out._back = _back
         return out
+
     
     def T(self):
         if isinstance(self.data, B.ndarray):

@@ -18,9 +18,11 @@ def set_backend(cuda: bool = False):
 def array(data): return _np.array(data)
 
 def asarray(data):
-    if has_cupy and isinstance(data, cp.ndarray):
-        return data 
-    return _np.asarray(data)
+    if use_cuda and has_cupy:
+        return cp.asarray(data) if not isinstance(data, cp.ndarray) else data
+    else:
+        return _np.asarray(data) if not isinstance(data, _np.ndarray) else data
+
 
 def zeros(shape): return _np.zeros(shape)
 def ones(shape): return _np.ones(shape)
