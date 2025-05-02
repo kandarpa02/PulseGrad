@@ -8,15 +8,20 @@ use_cuda = False
 _np = __import__('numpy')
 ndarray = _np.ndarray 
 
-def set_backend(cuda:bool = False):
-    global use_cuda, _np
+def set_backend(cuda: bool = False):
+    global use_cuda, _np, ndarray
     use_cuda = cuda and has_cupy
     _np = cp if use_cuda else __import__('numpy')
     ndarray = _np.ndarray
     print(f"[Backend] Using {'CuPy (GPU)' if use_cuda else 'NumPy (CPU)'}")
 
 def array(data): return _np.array(data)
-def asarray(data): return _np.asarray(data)
+
+def asarray(data):
+    if has_cupy and isinstance(data, cp.ndarray):
+        return data 
+    return _np.asarray(data)
+
 def zeros(shape): return _np.zeros(shape)
 def ones(shape): return _np.ones(shape)
 def full(shape, fill): return _np.full(shape, fill)
