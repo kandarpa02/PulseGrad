@@ -1,5 +1,8 @@
 import setuptools
-import platform
+import os
+
+cuda_version = os.getenv('CUDA_VERSION', '110')
+cupy_version = f"cupy-cuda{cuda_version}"
 
 setuptools.setup(
     name="PulseGrad",
@@ -17,6 +20,6 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         "numpy>=1.18.0",
-        "cupy-cuda112" 
+        cupy_version
     ],
 )
