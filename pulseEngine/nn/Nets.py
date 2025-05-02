@@ -5,7 +5,7 @@ class Linear:
     def __init__(self, in_features, out_features):
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = p.pulse(B.randn(self.in_features, self.out_features) * 0.01, compute_grad=True)
+        self.weight = p.pulse(B.randn((self.in_features, self.out_features)) * 0.01, compute_grad=True)
         self.bias = p.pulse(B.zeros((1, self.out_features)), compute_grad=True)
     def __str__(self):
         return f"{self.__class__.__name__}(in={self.in_features}, out={self.out_features})"
@@ -59,7 +59,7 @@ class Conv2D:
 
         kH, kW = self.kernel_size
         self.weight = p.pulse(
-            B.randn(out_channels, in_channels, kH, kW) * B.sqrt(2 / (in_channels * kH * kW)),
+            B.randn((out_channels, in_channels, kH, kW)) * B.sqrt(2 / (in_channels * kH * kW)),
             compute_grad=True
         )
         self.bias = p.pulse(B.zeros((out_channels, 1)), compute_grad=True)
