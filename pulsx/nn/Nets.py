@@ -40,42 +40,45 @@ class flat:
         return x
 
 
-
 class Conv2D:
-    def __init__(self, in_channels, out_channels, kernel_size, stride=(1, 1), padding='SAME', key=None):
+    def __init__(self, in_channels, out_channels, kernel_size,
+                 stride=(1, 1), padding='SAME', key=None):
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+        self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
         self.stride = stride
         self.padding = padding
-        self.key = key or random.PRNGKey(0)
+        key = key or random.PRNGKey(0)
+        k1, _ = random.split(key)
 
-        k1, k2 = random.split(self.key)
         kh, kw = self.kernel_size
         fan_in = kh * kw * in_channels
         std = jnp.sqrt(2.0 / fan_in)
-
-        self.kernel = std * random.normal(k1, shape=(kh, kw, in_channels, out_channels))
-        self.bias = jnp.zeros((out_channels,)) 
+        
+        self.kernel = std * random.normal(k1, (kh, kw, in_channels, out_channels))
+        self.bias = jnp.zeros((out_channels,))
 
     def __call__(self, x):
-        dim = x.data.ndim if isinstance(x, p.pulse) else x.ndim
-        if dim == 3:
-            x = x[..., None]  # (N, H, W) → (N, H, W, 1)
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x)
+        data = x.data               # shape (N, C, H, W)
 
-        y = lax.conv_general_dilated(
-            lhs=x.data if isinstance(x, p.pulse) else x,
+        nhwc = jnp.transpose(data, (0, 2, 3, 1))  # -> (N, H, W, C)
+
+        y_nhwc = lax.conv_general_dilated(
+            lhs=nhwc,
             rhs=self.kernel,
             window_strides=self.stride,
             padding=self.padding,
             dimension_numbers=('NHWC', 'HWIO', 'NHWC')
         )
-        y = y + self.bias 
 
-        if self.out_channels == 1:
-            y = jnp.squeeze(y, axis=-1)
-        return p.pulse(y, (y, self.kernel, self.bias), 'conv2d', compute_grad=True) 
+        y_nchw = jnp.transpose(y_nhwc, (0, 3, 1, 2))  # -> (N, C_out, H_out, W_out)
 
+        bias = self.bias.reshape((1, -1, 1, 1))       # (1, C_out, 1, 1)
+        out_data = y_nchw + bias
+
+        return p.pulse(out_data, (x, self.kernel, self.bias), 'conv2d', compute_grad=True)
 
 
 class MaxPool2D:
