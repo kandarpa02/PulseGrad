@@ -132,13 +132,18 @@ class pulse:
         return out
         
     @jit
+    def _matmul_jit(a: jnp.ndarray, b: jnp.ndarray):
+        return jnp.matmul(a, b)
+    
     def __matmul__(self, other):
-        self_data = jnp.array(self.data) if not isinstance(self.data, jnp.ndarray) else self.data
-        other_data = jnp.array(other.data) if not isinstance(other.data, jnp.ndarray) else other.data
-
-        result = jnp.matmul(self_data, other_data)
-        out = pulse(result, (self, other), '@', compute_grad=True, shape=result.shape)
-
+        
+        a = (self.data if isinstance(self.data, jnp.ndarray)
+         else jnp.array(self.data))
+        b = (other.data if isinstance(other.data, jnp.ndarray)
+            else jnp.array(other.data))
+        
+        result = self._matmul_jit(a, b)
+        out = pulse(result, (self, other), '@', compute_grad=True)
         def _back():
             self.gradient = self.gradient + jnp.matmul(out.gradient, other.data.T)
             other.gradient = other.gradient + jnp.matmul(self.data.T, out.gradient)
