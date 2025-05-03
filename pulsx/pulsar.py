@@ -136,7 +136,7 @@ class pulse:
         return jnp.matmul(a, b)
     
     def __matmul__(self, other):
-        
+
         a = (self.data if isinstance(self.data, jnp.ndarray)
          else jnp.array(self.data))
         b = (other.data if isinstance(other.data, jnp.ndarray)
@@ -176,7 +176,7 @@ class random:
     @staticmethod
     def randn(m, n):
         t = (m, n)
-        out = jnp.random.randn(m, n)
+        out = jnp.random.normal(m, n)
         return pulse(out, shape=t)
 
 def matmul(a, b):
