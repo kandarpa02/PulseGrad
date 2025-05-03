@@ -1,6 +1,7 @@
 import jax.numpy as jnp
 from jax import jit
 import jax.random as jax_random
+from functools import partial
 
 class pulse:
     def __init__(self, data, _children=[], op='', compute_grad = False, shape = 1):
@@ -51,11 +52,11 @@ class pulse:
     
     @staticmethod
     @jit
-    def add_data(a, b): 
+    def _add(a, b): 
         return a + b
 
     def __add__(self, other):
-        added = pulse.add_data(self.data, other.data)
+        added = pulse._add(self.data, other.data)
         out = pulse(added, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
         
         def _back():
@@ -77,10 +78,9 @@ class pulse:
         return out
     
     @staticmethod
-    @jit
+    @partial(jit, static_argnames=('axis','keepdims'))
     def sum_data(a, axis=None, keepdims=False):
         return a.sum(axis=axis, keepdims=keepdims)
-
 
     def add_data(self, axis=None, keepdims=False):
         if not isinstance(self, pulse):
