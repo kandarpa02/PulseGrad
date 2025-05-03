@@ -59,7 +59,8 @@ class Conv2D:
         self.bias = jnp.zeros((out_channels,)) 
 
     def __call__(self, x):
-        if x.ndim == 3:
+        dim = x.data.ndim if isinstance(x, jnp.ndarray) else x.ndim
+        if dim == 3:
             x = x[..., None]  # (N, H, W) → (N, H, W, 1)
 
         y = lax.conv_general_dilated(
