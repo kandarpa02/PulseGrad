@@ -98,7 +98,6 @@ class pulse:
         return out
 
 
-    
     def mean(self, axis=None, keepdims=False):
         if not isinstance(self, pulse):
             self = pulse(self)
@@ -134,8 +133,8 @@ class pulse:
         
     @jit
     def __matmul__(self, other):
-        self_data = jnp.array(self.data) if isinstance(self.data, jnp.ndarray) else self.data
-        other_data = jnp.array(other.data) if isinstance(other.data, jnp.ndarray) else other.data
+        self_data = jnp.array(self.data) if not isinstance(self.data, jnp.ndarray) else self.data
+        other_data = jnp.array(other.data) if not isinstance(other.data, jnp.ndarray) else other.data
 
         result = jnp.matmul(self_data, other_data)
         out = pulse(result, (self, other), '@', compute_grad=True, shape=result.shape)
