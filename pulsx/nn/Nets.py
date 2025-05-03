@@ -59,7 +59,7 @@ class Conv2D:
         self.bias = jnp.zeros((out_channels,)) 
 
     def __call__(self, x):
-        dim = x.data.ndim if isinstance(x, jnp.ndarray) else x.ndim
+        dim = x.data.ndim if isinstance(x, p.pulse) else x.ndim
         if dim == 3:
             x = x[..., None]  # (N, H, W) → (N, H, W, 1)
 
