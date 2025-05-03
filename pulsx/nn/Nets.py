@@ -4,11 +4,15 @@ import jax.numpy as jnp
 from jax import random, lax
 
 class Linear:
-    def __init__(self, in_features, out_features):
+    def __init__(self, in_features, out_features, key=None):
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = p.pulse(jnp.random.randn(self.in_features, self.out_features) * 0.01, compute_grad=True)
+        key = key or random.PRNGKey(0)
+        k1, _ = random.split(key)
+        weight_val = random.normal(k1, (self.in_features, self.out_features)) * 0.01
+        self.weight = p.pulse(weight_val, compute_grad=True)
         self.bias = p.pulse(jnp.zeros((1, self.out_features)), compute_grad=True)
+
     def __str__(self):
         return f"{self.__class__.__name__}(in={self.in_features}, out={self.out_features})"
 
