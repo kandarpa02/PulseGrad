@@ -1,10 +1,11 @@
 import jax.numpy as jnp
 from jax import jit
+import jax.random as jax_random
 
 class pulse:
     def __init__(self, data, _children=[], op='', compute_grad = False, shape = 1):
         self.data = jnp.array(data) if isinstance(data, list) else data
-        self.shape = self.data.shape if shape is None else shape
+        self.shape = self.data.shape if isinstance(self.data, jnp.ndarray) else shape
         self.gradient = jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
         self._back = lambda: None
         self.stored = list(_children)
@@ -75,6 +76,7 @@ class pulse:
         out._back = _back
         return out
     
+    @staticmethod
     @jit
     def sum_data(a, axis=None, keepdims=False):
         return a.sum(axis=axis, keepdims=keepdims)
@@ -130,7 +132,8 @@ class pulse:
                 raise ValueError("Please activate your Sharingan! You did not set 'compute_grad = True' before backprop")
         out._back = _back
         return out
-        
+    
+    @staticmethod
     @jit
     def _matmul_jit(a: jnp.ndarray, b: jnp.ndarray):
         return jnp.matmul(a, b)
@@ -143,7 +146,7 @@ class pulse:
             else jnp.array(other.data))
         
         result = self._matmul_jit(a, b)
-        out = pulse(result, (self, other), '@', compute_grad=True)
+        out = pulse(result, (self, other), '@', compute_grad=True, shape=(a.shape[0], b.shape[1]))
         def _back():
             self.gradient = self.gradient + jnp.matmul(out.gradient, other.data.T)
             other.gradient = other.gradient + jnp.matmul(self.data.T, out.gradient)
@@ -175,8 +178,10 @@ class pulse:
 class random:
     @staticmethod
     def randn(m, n):
+        key = jax_random.PRNGKey(0)
+        k1, _ = jax_random.split(key)
         t = (m, n)
-        out = jnp.random.normal(m, n)
+        out = jax_random.normal(k1, t)
         return pulse(out, shape=t)
 
 def matmul(a, b):
