@@ -64,7 +64,7 @@ class Conv2D:
             x = x[..., None]  # (N, H, W) → (N, H, W, 1)
 
         y = lax.conv_general_dilated(
-            lhs=x.data if isinstance(x, p.pulse) else x
+            lhs=x.data if isinstance(x, p.pulse) else x,
             rhs=self.kernel,
             window_strides=self.stride,
             padding=self.padding,
