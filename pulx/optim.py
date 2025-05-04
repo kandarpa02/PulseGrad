@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-import pulsx.pulsar as c
+import pulx.pulsar as c
 
 class AdamOptimizer:
     def __init__(self, parameters, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,

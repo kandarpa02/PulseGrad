@@ -1,4 +1,4 @@
-from pulsx.pulsar import pulse
+from pulx.pulsar import pulse
 import jax.numpy as jnp
 
 class TanH:

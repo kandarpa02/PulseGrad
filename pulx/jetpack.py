@@ -1,5 +1,5 @@
-import pulsx.nn.Nets as net
-import pulsx.pulsar as p
+import pulx.nn.nets as net
+import pulx.pulsar as p
 import jax.numpy as jnp
 import numpy as np
 
