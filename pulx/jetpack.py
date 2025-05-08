@@ -1,6 +1,4 @@
-import pulx.nn.nets as net
-import pulx.pulsar as p
-import jax.numpy as jnp
+import pulx.nume as n
 import numpy as np
 
 class Jet:
@@ -9,7 +7,7 @@ class Jet:
         self.parameters = {k:v.data for k,v in self.param().items()}
 
     def __call__(self, x):
-        x = p.pulse(x)
+        x = n.Array(x)
         for module in self.modules:
             x = module(x)
         return x

@@ -1,4 +1,4 @@
-import pulx.pulsar as p
+import pulx.nume as n
 import jax.numpy as jnp
 from jax import random, lax
 
@@ -9,15 +9,15 @@ class Linear:
         key = key or random.PRNGKey(0)
         k1, _ = random.split(key)
         weight_val = random.normal(k1, (self.in_features, self.out_features)) * 0.01
-        self.weight = p.pulse(weight_val, compute_grad=True)
-        self.bias = p.pulse(jnp.zeros((1, self.out_features)), compute_grad=True)
+        self.weight = n.Array(weight_val, compute_grad=True)
+        self.bias = n.Array(jnp.zeros((1, self.out_features)), compute_grad=True)
 
     def __str__(self):
         return f"{self.__class__.__name__}(in={self.in_features}, out={self.out_features})"
 
     def __call__(self, x):
-        if not isinstance(x, p.pulse):
-            x = p.pulse(x)
+        if not isinstance(x, n.Array):
+            x = n.Array(x)
 
         y = x @ self.weight
         z = y + self.bias  
@@ -35,7 +35,7 @@ class flat:
             x_data = jnp.asarray(x.data)
 
         N = x_data.shape[0]
-        x = p.pulse(x_data.reshape(N, -1), compute_grad=self.compute_grad)
+        x = n.Array(x_data.reshape(N, -1), compute_grad=self.compute_grad)
         return x
 
 
@@ -58,8 +58,8 @@ class Conv2D:
         self.bias = jnp.zeros((out_channels,))
 
     def __call__(self, x):
-        if not isinstance(x, p.pulse):
-            x = p.pulse(x)
+        if not isinstance(x, n.Array):
+            x = n.Array(x)
         data = x.data               # shape (N, C, H, W)
 
         nhwc = jnp.transpose(data, (0, 2, 3, 1))  # -> (N, H, W, C)
@@ -77,7 +77,7 @@ class Conv2D:
         bias = self.bias.reshape((1, -1, 1, 1))       # (1, C_out, 1, 1)
         out_data = y_nchw + bias
 
-        return p.pulse(out_data, (x, self.kernel, self.bias), 'conv2d', compute_grad=True)
+        return n.Array(out_data, (x, self.kernel, self.bias), 'conv2d', compute_grad=True)
 
 
 class MaxPool2D:
@@ -89,8 +89,8 @@ class MaxPool2D:
         return f"{self.__class__.__name__}(kernel_size={self.kernel_size}, stride={self.stride})"
 
     def __call__(self, x):
-        if not isinstance(x, p.pulse):
-            x = p.pulse(x, compute_grad=True)
+        if not isinstance(x, n.Array):
+            x = n.Array(x, compute_grad=True)
 
         x_nhwc = jnp.transpose(x.data, (0, 2, 3, 1))  # (N, H, W, C)
 
@@ -105,7 +105,7 @@ class MaxPool2D:
 
         out_nchw = jnp.transpose(pooled, (0, 3, 1, 2))  # (N, C, H, W)
 
-        return p.pulse(out_nchw, (x,), 'maxpool', compute_grad=False)
+        return n.Array(out_nchw, (x,), 'maxpool', compute_grad=False)
     
 
 class Dropout:
@@ -117,8 +117,8 @@ class Dropout:
         self.train = train
 
     def __call__(self, x):
-        if not isinstance(x, p.pulse):
-            x = p.pulse(x)
+        if not isinstance(x, n.Array):
+            x = n.Array(x)
 
         if not self.train or self.rate == 0.0:
             return x
@@ -126,23 +126,23 @@ class Dropout:
         self.key, subkey = random.split(self.key)
         mask = random.bernoulli(subkey, p=self.keep_prob, shape=x.data.shape)
         dropped = jnp.where(mask, x.data / self.keep_prob, 0.0)
-        return p.pulse(dropped, (x,), 'dropout', compute_grad=x.compute_grad)
+        return n.Array(dropped, (x,), 'dropout', compute_grad=x.compute_grad)
     
 
 class LayerNorm:
     def __init__(self, normalized_shape, eps=1e-5):
         self.eps = eps
         self.normalized_shape = normalized_shape
-        self.gamma = p.pulse(jnp.ones(normalized_shape), compute_grad=True)
-        self.beta = p.pulse(jnp.zeros(normalized_shape), compute_grad=True)
+        self.gamma = n.Array(jnp.ones(normalized_shape), compute_grad=True)
+        self.beta = n.Array(jnp.zeros(normalized_shape), compute_grad=True)
 
     def __call__(self, x):
-        if not isinstance(x, p.pulse):
-            x = p.pulse(x)
+        if not isinstance(x, n.Array):
+            x = n.Array(x)
 
         mean = jnp.mean(x.data, axis=-1, keepdims=True)
         var = jnp.var(x.data, axis=-1, keepdims=True)
         normed = (x.data - mean) / jnp.sqrt(var + self.eps)
         out = self.gamma.data * normed + self.beta.data
 
-        return p.pulse(out, (x, self.gamma, self.beta), 'layernorm', compute_grad=x.compute_grad)
+        return n.Array(out, (x, self.gamma, self.beta), 'layernorm', compute_grad=x.compute_grad)

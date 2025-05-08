@@ -3,9 +3,9 @@ from jax import jit
 import jax.random as random
 from functools import partial
 
-class pulse:
+class Array:
     def __init__(self, data, _children=[], op='', compute_grad = False, shape = 1):
-        self.data = jnp.array(data) if isinstance(data, list) else data
+        self.data = jnp.array(data) if isinstance(data, (list, int, float)) else data
         self.shape = self.data.shape if isinstance(self.data, jnp.ndarray) else shape
         self.gradient = jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
         self._back = lambda: None
@@ -15,9 +15,9 @@ class pulse:
 
     def __repr__(self):
 
-        prefix = "pulse("
+        prefix = "Array("
         def fmt_row(row):
-            return "[" + ", ".join(f"{v:.2f}" for v in row) + "]"
+            return "[" + ", ".join(f"{v}" for v in row) + "]"
     
         if isinstance(self.data, (list, jnp.ndarray)):
             matrix = jnp.array(self.data)
@@ -26,7 +26,7 @@ class pulse:
                 body = str(matrix)
     
             elif matrix.ndim == 1:
-                body = "[" + ", ".join(f"{v:.2f}" for v in matrix) + "]"
+                body = "[" + ", ".join(f"{v}" for v in matrix) + "]"
     
             elif matrix.ndim == 2:
                 head, tail = 3, 2
@@ -49,6 +49,7 @@ class pulse:
     
             return f"{prefix}{body}, compute_grad: {'enabled' if self.compute_grad else 'disabled'})"
         return f"{prefix}{self.data}, compute_grad: {'enabled' if self.compute_grad else 'disabled'})"
+
     
     @staticmethod
     @jit
@@ -56,8 +57,8 @@ class pulse:
         return a + b
 
     def __add__(self, other):
-        added = pulse._add(self.data, other.data)
-        out = pulse(added, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
+        added = Array._add(self.data, other.data)
+        out = Array(added, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
         
         def _back():
             grad = out.gradient
@@ -83,11 +84,11 @@ class pulse:
         return a.sum(axis=axis, keepdims=keepdims)
 
     def add_data(self, axis=None, keepdims=False):
-        if not isinstance(self, pulse):
-            self = pulse(self)
+        if not isinstance(self, Array):
+            self = Array(self)
         
-        result = pulse.sum_data(self.data, axis=axis, keepdims=keepdims)
-        out = pulse(result, (self,), 'sum', compute_grad=True, shape=result.shape)
+        result = Array.sum_data(self.data, axis=axis, keepdims=keepdims)
+        out = Array(result, (self,), 'sum', compute_grad=True, shape=result.shape)
 
         def _back():
             grad_shape = self.data.shape
@@ -101,11 +102,11 @@ class pulse:
 
 
     def mean(self, axis=None, keepdims=False):
-        if not isinstance(self, pulse):
-            self = pulse(self)
+        if not isinstance(self, Array):
+            self = Array(self)
 
         result = self.data.mean(axis=axis, keepdims=keepdims)
-        out = pulse(result, (self,), 'mean', compute_grad=self.compute_grad, shape=result.shape)
+        out = Array(result, (self,), 'mean', compute_grad=self.compute_grad, shape=result.shape)
 
         def _back():
             grad = out.gradient
@@ -122,7 +123,7 @@ class pulse:
 
     @jit
     def __mul__(self, other):
-        out = pulse(self.data * other.data, (self, other), '*', compute_grad=True)
+        out = Array(self.data * other.data, (self, other), '*', compute_grad=True)
         
         def _back():
             if self.compute_grad:
@@ -146,7 +147,7 @@ class pulse:
             else jnp.array(other.data))
         
         result = self._matmul_jit(a, b)
-        out = pulse(result, (self, other), '@', compute_grad=True, shape=(a.shape[0], b.shape[1]))
+        out = Array(result, (self, other), '@', compute_grad=True, shape=(a.shape[0], b.shape[1]))
         def _back():
             self.gradient = self.gradient + jnp.matmul(out.gradient, other.data.T)
             other.gradient = other.gradient + jnp.matmul(self.data.T, out.gradient)
@@ -156,7 +157,7 @@ class pulse:
 
     def T(self):
         if isinstance(self.data, jnp.ndarray):
-            return pulse(self.data.T, (self,), 'transpose')
+            return Array(self.data.T, (self,), 'transpose')
         else:
             raise TypeError("I am sorry scalar value cannot be transposed")
 
@@ -182,33 +183,33 @@ class random:
         k1, _ = random.split(key)
         t = (m, n)
         out = random.normal(k1, t)
-        return pulse(out, shape=t)
+        return Array(out, shape=t)
 
 def matmul(a, b):
-    a = pulse(a) if not isinstance(a, pulse) else a
-    b = pulse(b) if not isinstance(b, pulse) else b
+    a = Array(a) if not isinstance(a, Array) else a
+    b = Array(b) if not isinstance(b, Array) else b
     return a @ b
 
 def ones(x):
-    x = pulse(x) if not isinstance(x, pulse) else x
+    x = Array(x) if not isinstance(x, Array) else x
     x = jnp.ones(x.data)
-    return pulse(x)
+    return Array(x)
 
 def ones_like(x):
-    x = pulse(x) if not isinstance(x, pulse) else x
+    x = Array(x) if not isinstance(x, Array) else x
     x = jnp.ones_like(x.data)
-    return pulse(x)
+    return Array(x)
 
 def zeros(x):
-    x = pulse(x) if not isinstance(x, pulse) else x
+    x = Array(x) if not isinstance(x, Array) else x
     x = jnp.zeros(x.data)
-    return pulse(x)
+    return Array(x)
 
 def zeros_like(x):
-    x = pulse(x) if not isinstance(x, pulse) else x
+    x = Array(x) if not isinstance(x, Array) else x
     x = jnp.zeros_like(x.data)
-    return pulse(x)
+    return Array(x)
 
 def full(shape, fill):
-    x = pulse(jnp.full(shape, fill))
+    x = Array(jnp.full(shape, fill))
     return x
