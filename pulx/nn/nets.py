@@ -119,7 +119,11 @@ class Dropout:
         self.keep_prob = 1.0 - rate
         self.key = key or random.PRNGKey(42)
         self.train = train
+    
+    def __str__(self):
+        return f"{self.__class__.__name__}()"
 
+    
     def __call__(self, x):
         if not isinstance(x, n.Array):
             x = n.Array(x)
