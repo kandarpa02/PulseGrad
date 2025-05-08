@@ -5,6 +5,9 @@ class TanH:
     def __init__(self):
         pass
 
+    def __str__(self):
+        return f"{self.__class__.__name__}()"
+    
     def __call__(self, Array_obj):
         x = Array_obj.data
         th = (jnp.exp(x) - jnp.exp(-x)) / (jnp.exp(x) + jnp.exp(-x))
@@ -23,6 +26,9 @@ class ReLU:
     def __init__(self):
         pass
 
+    def __str__(self):
+        return f"{self.__class__.__name__}()"
+
     def __call__(self, Array_obj):
         x = Array_obj.data
         rlu = jnp.maximum(x, 0)
@@ -40,6 +46,10 @@ class ReLU:
 class Sigmoid:
     def __init__(self):
         pass
+
+    def __str__(self):
+        return f"{self.__class__.__name__}()"
+    
     def __call__(self, Array_obj):
         if isinstance(Array_obj.data, list):
             Array_obj.data = jnp.Array(Array_obj.data)
@@ -61,6 +71,10 @@ class Sigmoid:
 class Softmax:
     def __init__(self):
         pass
+
+    def __str__(self):
+        return f"{self.__class__.__name__}()"
+    
     def __call__(self, Array_obj):
         if isinstance(Array_obj, Array):
             axis = 1 if Array_obj.data.ndim == 2 and Array_obj.data.shape[1] > 1 else 0
@@ -90,7 +104,7 @@ class Softmax:
         else:
             raise TypeError("Ohh shi*! Softmax expects a Array tensor (matrix or vector), not a scalar.")
 
-class BCELoss():
+class BCELoss:
     def __init__(self):
         pass
 
