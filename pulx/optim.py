@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 
-class AdamOptimizer:
+class Adam:
     def __init__(self, parameters, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  weight_decay=0.0, max_grad_norm=None, total_steps=None):
         self.parameters = parameters

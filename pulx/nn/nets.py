@@ -29,6 +29,9 @@ class Flat:
     def __init__(self, compute_grad=False):
         self.compute_grad = compute_grad
 
+    def __str__(self):
+        return f"{self.__class__.__name__}()"
+
     def __call__(self, x):
         if hasattr(x.data, 'shape'):
             x_data = x.data
@@ -59,7 +62,7 @@ class Conv2D:
         self.bias = jnp.zeros((out_channels,))
 
     def __str__(self):
-        return f"{self.__class__.__name__}(c_in={self.in_features}, c_out={self.out_features})"
+        return f"{self.__class__.__name__}(c_in={self.in_channels}, c_out={self.out_channels}, kernel_size={self.kernel_size})"
 
     def __call__(self, x):
         if not isinstance(x, n.Array):

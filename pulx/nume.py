@@ -50,7 +50,6 @@ class Array:
             return f"{prefix}{body}, compute_grad: {'enabled' if self.compute_grad else 'disabled'})"
         return f"{prefix}{self.data}, compute_grad: {'enabled' if self.compute_grad else 'disabled'})"
 
-    
     @staticmethod
     @jit
     def _add(a, b): 
@@ -121,9 +120,14 @@ class Array:
         out._back = _back
         return out
 
+    @staticmethod
     @jit
+    def _mul(a, b):
+        return a * b 
+    
     def __mul__(self, other):
-        out = Array(self.data * other.data, (self, other), '*', compute_grad=True)
+        multiplied = Array._mul(self.data, other.data)
+        out = Array(multiplied, (self, other), '*', compute_grad=True)
         
         def _back():
             if self.compute_grad:
@@ -134,6 +138,33 @@ class Array:
         out._back = _back
         return out
     
+    @staticmethod
+    @jit
+    def _div(a, b):
+        return a / b
+    def __truediv__(self, other):
+        div = Array._div(self.data, other.data)
+        out = Array(div, (self, other), '/', compute_grad=True)
+        def _back():
+            self.gradient = self.gradient + out.gradient * (1 / other.data)
+            other.gradient = other.gradient + (out.gradient * (-self.data / (other.data ** 2)))
+        out._back = _back
+        return out
+
+    @staticmethod
+    @jit
+    def _pow(x, a):
+        return x ** a
+    def __pow__(self, other):
+        power = Array._pow(self.data, other.data)
+        out = Array(power, (self, other), '**', compute_grad=True)
+        
+        def _back():
+            self.gradient += out.gradient * other.data * (self.data ** (other.data - 1))
+            other.gradient += out.gradient * (self.data ** other.data) * jnp.log(self.data)
+        out._back = _back
+        return out
+
     @staticmethod
     @jit
     def _matmul_jit(a: jnp.ndarray, b: jnp.ndarray):

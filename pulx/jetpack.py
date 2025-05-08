@@ -11,7 +11,19 @@ class Jet:
         for module in self.modules:
             x = module(x)
         return x
-        
+    
+    def mode(self, mode:str):
+        '''
+        needed when using Dropout layer only
+        '''
+        from pulx.nn.nets import Dropout
+        for i, module in enumerate(self.modules):
+            if isinstance(module, Dropout):
+                if mode == 'train':
+                    module.train = True
+                else:
+                    module.train = False
+
     def param(self):
         params = {}
         for i, module in enumerate(self.modules):
