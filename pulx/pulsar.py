@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from jax import jit
-import jax.random as jax_random
+import jax.random as random
 from functools import partial
 
 class pulse:
@@ -178,10 +178,10 @@ class pulse:
 class random:
     @staticmethod
     def randn(m, n):
-        key = jax_random.PRNGKey(0)
-        k1, _ = jax_random.split(key)
+        key = random.PRNGKey(0)
+        k1, _ = random.split(key)
         t = (m, n)
-        out = jax_random.normal(k1, t)
+        out = random.normal(k1, t)
         return pulse(out, shape=t)
 
 def matmul(a, b):

@@ -1,7 +1,6 @@
 import jax
 import jax.numpy as jnp
 from jax import jit
-from pulx.jetpack import Jet
 import pulx.utils as u
 from pulx.nn import nets
 from pulx.nn.nets import forward

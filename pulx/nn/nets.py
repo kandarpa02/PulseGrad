@@ -1,80 +1,83 @@
+import pulx.pulsar as p
 import jax.numpy as jnp
-from jax import random, lax, jit
+from jax import random, lax
 
 class Linear:
-    def __init__(self, in_features, out_features):
+    def __init__(self, in_features, out_features, key=None):
         self.in_features = in_features
         self.out_features = out_features
-
-    def init_param(self, key=None):
-        if key is None:
-            key = random.PRNGKey(0)
+        key = key or random.PRNGKey(0)
         k1, _ = random.split(key)
-        std = jnp.sqrt(2.0 / self.in_features)
-        weight_val = random.normal(k1, (self.in_features, self.out_features)) * std
-        w = weight_val
-        b = jnp.zeros((self.out_features,))
-        return {'w': w, 'b': b}
-    
+        weight_val = random.normal(k1, (self.in_features, self.out_features)) * 0.01
+        self.weight = p.pulse(weight_val, compute_grad=True)
+        self.bias = p.pulse(jnp.zeros((1, self.out_features)), compute_grad=True)
+
     def __str__(self):
         return f"{self.__class__.__name__}(in={self.in_features}, out={self.out_features})"
 
-    def __call__(self, x, param:dict):
-       return jnp.matmul(x, param['w']) + param['b']
-
-
-class Flat:
     def __call__(self, x):
-        return x.reshape(x.shape[0], -1)
-    def __str__(self):
-        return f"{self.__class__.__name__}()"
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x)
 
+        y = x @ self.weight
+        z = y + self.bias  
+
+        return z
+
+class flat:
+    def __init__(self, compute_grad=False):
+        self.compute_grad = compute_grad
+
+    def __call__(self, x):
+        if hasattr(x.data, 'shape'):
+            x_data = x.data
+        else:
+            x_data = jnp.asarray(x.data)
+
+        N = x_data.shape[0]
+        x = p.pulse(x_data.reshape(N, -1), compute_grad=self.compute_grad)
+        return x
 
 
 class Conv2D:
     def __init__(self, in_channels, out_channels, kernel_size,
-                 stride=(1, 1), padding='VALID', key=None):
+                 stride=(1, 1), padding='SAME', key=None):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
         self.stride = stride
         self.padding = padding
-
-
-    def init_param(self, key=None):
-        if key is None:
-            key = random.PRNGKey(0)
+        key = key or random.PRNGKey(0)
         k1, _ = random.split(key)
+
         kh, kw = self.kernel_size
-        fan_in = kh * kw * self.in_channels
+        fan_in = kh * kw * in_channels
         std = jnp.sqrt(2.0 / fan_in)
+        
+        self.kernel = std * random.normal(k1, (kh, kw, in_channels, out_channels))
+        self.bias = jnp.zeros((out_channels,))
 
-        kernel = std * random.normal(k1, (kh, kw, self.in_channels, self.out_channels))
-        b = jnp.zeros((self.out_channels,))
+    def __call__(self, x):
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x)
+        data = x.data               # shape (N, C, H, W)
 
-        return {'w': kernel, 'b': b}
-    
-    def __str__(self):
-        return f"{self.__class__.__name__}(in_channels={self.in_channels}, out_channels={self.out_channels}, kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding})"
-
-
-    def __call__(self, x, param:dict):
-        nhwc = jnp.transpose(x, (0, 2, 3, 1)) 
+        nhwc = jnp.transpose(data, (0, 2, 3, 1))  # -> (N, H, W, C)
 
         y_nhwc = lax.conv_general_dilated(
             lhs=nhwc,
-            rhs=param['w'],
+            rhs=self.kernel,
             window_strides=self.stride,
             padding=self.padding,
             dimension_numbers=('NHWC', 'HWIO', 'NHWC')
         )
 
-        y_nchw = jnp.transpose(y_nhwc, (0, 3, 1, 2))
+        y_nchw = jnp.transpose(y_nhwc, (0, 3, 1, 2))  # -> (N, C_out, H_out, W_out)
 
-        bias = param['b'].reshape((1, -1, 1, 1))
+        bias = self.bias.reshape((1, -1, 1, 1))       # (1, C_out, 1, 1)
         out_data = y_nchw + bias
 
-        return out_data
+        return p.pulse(out_data, (x, self.kernel, self.bias), 'conv2d', compute_grad=True)
 
 
 class MaxPool2D:
@@ -86,75 +89,60 @@ class MaxPool2D:
         return f"{self.__class__.__name__}(kernel_size={self.kernel_size}, stride={self.stride})"
 
     def __call__(self, x):
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x, compute_grad=True)
 
-        x_nhwc = jnp.transpose(x, (0, 2, 3, 1))
+        x_nhwc = jnp.transpose(x.data, (0, 2, 3, 1))  # (N, H, W, C)
 
         pooled = lax.reduce_window(
             x_nhwc,
             init_value=-jnp.inf,
             computation=lax.max,
-            window_dimensions=(1, self.kernel_size[0], self.kernel_size[1], 1),
+            window_dimensions=(1, *self.kernel_size, 1),
             window_strides=(1, *self.stride, 1),
             padding="VALID"
         )
 
-        out_nchw = jnp.transpose(pooled, (0, 3, 1, 2))
+        out_nchw = jnp.transpose(pooled, (0, 3, 1, 2))  # (N, C, H, W)
 
-        return out_nchw
+        return p.pulse(out_nchw, (x,), 'maxpool', compute_grad=False)
     
 
 class Dropout:
-    def __init__(self, rate, train=None):
-        assert 0.0 <= rate < 1.0
+    def __init__(self, rate=0.5, key=None, train=True):
+        assert 0.0 <= rate < 1.0, "Dropout rate must be in [0, 1)"
         self.rate = rate
         self.keep_prob = 1.0 - rate
+        self.key = key or random.PRNGKey(42)
         self.train = train
 
-    def __str__(self):
-        return f"{self.__class__.__name__}(rate={self.rate}, train={self.train})"
+    def __call__(self, x):
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x)
 
-    def __call__(self, x, param: dict):
         if not self.train or self.rate == 0.0:
             return x
-        key = param.get("key", None)
-        if key is None:
-            raise ValueError("Dropout layer requires a PRNG key in param['key']")
-        
-        mask = random.bernoulli(key, p=self.keep_prob, shape=x.shape)
-        return jnp.where(mask, x / self.keep_prob, 0.0)
 
+        self.key, subkey = random.split(self.key)
+        mask = random.bernoulli(subkey, p=self.keep_prob, shape=x.data.shape)
+        dropped = jnp.where(mask, x.data / self.keep_prob, 0.0)
+        return p.pulse(dropped, (x,), 'dropout', compute_grad=x.compute_grad)
+    
 
 class LayerNorm:
     def __init__(self, normalized_shape, eps=1e-5):
         self.eps = eps
         self.normalized_shape = normalized_shape
+        self.gamma = p.pulse(jnp.ones(normalized_shape), compute_grad=True)
+        self.beta = p.pulse(jnp.zeros(normalized_shape), compute_grad=True)
 
-    def init_param(self):
-        gamma = jnp.ones(self.normalized_shape)
-        beta = jnp.zeros(self.normalized_shape)
-        return {'w': gamma, 'b': beta}
+    def __call__(self, x):
+        if not isinstance(x, p.pulse):
+            x = p.pulse(x)
 
-    def __call__(self, x, param: dict):
-        mean = jnp.mean(x, axis=-1, keepdims=True)
-        var = jnp.var(x, axis=-1, keepdims=True)
-        normed = (x - mean) / jnp.sqrt(var + self.eps)
-        return param['w'] * normed + param['b']
+        mean = jnp.mean(x.data, axis=-1, keepdims=True)
+        var = jnp.var(x.data, axis=-1, keepdims=True)
+        normed = (x.data - mean) / jnp.sqrt(var + self.eps)
+        out = self.gamma.data * normed + self.beta.data
 
-
-def make_forward(module):
-    """Returns a JIT-compiled forward function for a given module."""
-    if hasattr(module, '__call__'):
-        @jit
-        def f(in_, param):
-            if param is None:
-                return module(in_)
-            else:
-                return module(in_, param)
-        return f
-    else:
-        raise TypeError("Provided module must be callable.")
-    
-def forward(module, x, param):
-    fwd = make_forward(module)
-    out = fwd(x, param)
-    return out
+        return p.pulse(out, (x, self.gamma, self.beta), 'layernorm', compute_grad=x.compute_grad)
