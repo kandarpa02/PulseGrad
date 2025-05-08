@@ -2,6 +2,7 @@ import pulx.nume as n
 import jax.numpy as jnp
 from jax import random, lax
 
+
 class Linear:
     def __init__(self, in_features, out_features, key=None):
         self.in_features = in_features
@@ -24,7 +25,7 @@ class Linear:
 
         return z
 
-class flat:
+class Flat:
     def __init__(self, compute_grad=False):
         self.compute_grad = compute_grad
 
@@ -56,6 +57,9 @@ class Conv2D:
         
         self.kernel = std * random.normal(k1, (kh, kw, in_channels, out_channels))
         self.bias = jnp.zeros((out_channels,))
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(c_in={self.in_features}, c_out={self.out_features})"
 
     def __call__(self, x):
         if not isinstance(x, n.Array):
