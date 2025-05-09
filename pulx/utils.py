@@ -1,5 +1,6 @@
 from pulx import Array
 import jax.numpy as jnp
+from jax import jit
 
 class TanH:
     def __init__(self):
@@ -8,14 +9,24 @@ class TanH:
     def __str__(self):
         return f"{self.__class__.__name__}()"
     
+    @staticmethod
+    @jit
+    def _th(z):
+        return (jnp.exp(z) - jnp.exp(-z)) / (jnp.exp(z) + jnp.exp(-z))
+    @staticmethod
+    @jit
+    def _th_grad(th, out_grad):
+        grad = (1 - th ** 2) * out_grad
+        return grad
+    
     def __call__(self, Array_obj):
         x = Array_obj.data
-        th = (jnp.exp(x) - jnp.exp(-x)) / (jnp.exp(x) + jnp.exp(-x))
+        th = TanH._th(x)
         out = Array(th, (Array_obj,), 'tanh', compute_grad=True)
 
         def _back():
             if Array_obj.compute_grad:
-                grad = (1 - th ** 2) * out.gradient
+                grad = TanH._th_grad(th, out.gradient)
                 Array_obj.gradient = Array_obj.gradient + grad
 
         out._back = _back
@@ -29,14 +40,24 @@ class ReLU:
     def __str__(self):
         return f"{self.__class__.__name__}()"
 
+    @staticmethod
+    @jit
+    def _rlu(z):
+        return jnp.maximum(z, 0)
+    
+    @staticmethod
+    @jit
+    def _rlu_grad(z, out_grad):
+        return jnp.where(z > 0, 1.0, 0.0) * out_grad
+
     def __call__(self, Array_obj):
         x = Array_obj.data
-        rlu = jnp.maximum(x, 0)
+        rlu = ReLU._rlu(x)
         out = Array(rlu, (Array_obj,), 'relu', compute_grad=True)
 
         def _back():
             if Array_obj.compute_grad:
-                grad = jnp.where(x > 0, 1.0, 0.0) * out.gradient
+                grad = ReLU._rlu_grad(x, out.gradient)
                 Array_obj.gradient = Array_obj.gradient + grad
 
         out._back = _back
@@ -104,19 +125,18 @@ class Softmax:
         else:
             raise TypeError("Ohh shi*! Softmax expects a Array tensor (matrix or vector), not a scalar.")
 
+
 class BCELoss:
     def __init__(self):
         pass
 
-    def __call__(self, logits, target):
-        
-        if not isinstance(logits, Array) or not isinstance(target, Array):
-            raise TypeError("Inputs must be Array vectors! please check your inputs!.")
-            
+    @staticmethod
+    @jit
+    def _bce(x, y):
         def sigmoid():
-            if isinstance(logits.data, list):
-                logits.data = jnp.Array(logits.data)
-            sig = 1/(1 + jnp.exp(-logits.data))
+            if isinstance(x.data, list):
+                x.data = jnp.Array(x.data)
+            sig = 1/(1 + jnp.exp(-x.data))
             return sig
 
         pred = sigmoid()
@@ -124,13 +144,34 @@ class BCELoss:
         eps = 1e-12
         clipped_pred = jnp.clip(pred, eps, 1. - eps)
 
-        loss_val = -jnp.mean(jnp.log(clipped_pred) * target.data + jnp.log(1 - clipped_pred) * (1 - target.data))
+        loss_val = -jnp.mean(jnp.log(clipped_pred) * y.data + jnp.log(1 - clipped_pred) * (1 - y.data))
+        return loss_val
+    
+    @staticmethod
+    @jit
+    def _bce_grad(x, y, out_grad):
+        def sigmoid():
+            if isinstance(x.data, list):
+                x.data = jnp.Array(x.data)
+            sig = 1/(1 + jnp.exp(-x.data))
+            return sig
+
+        pred = sigmoid()
+        return (pred - y.data) * out_grad
+
+
+    def __call__(self, logits, target):
+        
+        if not isinstance(logits, Array) or not isinstance(target, Array):
+            raise TypeError("Inputs must be Array vectors! please check your inputs!.")
+            
+        loss_val = BCELoss._bce(logits, target)
 
         out = Array(loss_val, (logits, target), 'binary_crossentropy', compute_grad= True)
 
         def _back():
             if logits.compute_grad == True:
-                logits.gradient = logits.gradient + (pred - target.data) * out.gradient
+                logits.gradient = logits.gradient + BCELoss._bce_grad(logits, target, out.gradient)
 
         out._back = _back
         return out
@@ -138,25 +179,17 @@ class BCELoss:
 class CrossEntropyLoss:
     def __init__(self):
         pass
-
-    def __call__(self, logits, target): # pass logits not softmax values
-        
-        if not isinstance(logits, Array) or not isinstance(target, Array):
-            raise TypeError("Inputs must be Array vectors! please check your inputs!.")
-
+    
+    @staticmethod
+    @jit
+    def _cce(x, y):
         def softmax():
-            if not isinstance(logits, int):
-                if isinstance(logits.data, list):
-                    logits.data = jnp.Array(logits.data)
-                axis = 1 if logits.data.ndim == 2 and logits.data.shape[1] > 1 else 0
-                data = logits.data
-                shifted = data - jnp.max(data, axis=axis, keepdims=True)
-                exps = jnp.exp(shifted)
-                sum_exps = jnp.sum(exps, axis=axis, keepdims=True)
-                softmax_output = exps / sum_exps
-            else :
-                raise TypeError("Maybe you should look closely what you are passing as input, please pass vectors not int")
-
+            axis = 1 if x.ndim == 2 and x.shape[1] > 1 else 0
+            data = x
+            shifted = data - jnp.max(data, axis=axis, keepdims=True)
+            exps = jnp.exp(shifted)
+            sum_exps = jnp.sum(exps, axis=axis, keepdims=True)
+            softmax_output = exps / sum_exps
             return softmax_output
                 
         pred = softmax()
@@ -164,12 +197,37 @@ class CrossEntropyLoss:
         eps = 1e-12
         clipped_pred = jnp.clip(pred, eps, 1. - eps)
 
-        loss_val = -jnp.sum(target.data * jnp.log(clipped_pred)) / logits.shape[0]
+        loss_val = -jnp.sum(y * jnp.log(clipped_pred)) / x.shape[0]
+
+        return loss_val
+        
+    @staticmethod
+    @jit
+    def _cce_grad(x, y, out_grad):
+        def softmax():
+            axis = 1 if x.ndim == 2 and x.shape[1] > 1 else 0
+            data = x
+            shifted = data - jnp.max(data, axis=axis, keepdims=True)
+            exps = jnp.exp(shifted)
+            sum_exps = jnp.sum(exps, axis=axis, keepdims=True)
+            softmax_output = exps / sum_exps
+            return softmax_output
+                
+        pred = softmax()
+        return ((pred - y) / x.shape[0]) * out_grad
+
+    def __call__(self, logits, target): # pass logits not softmax values
+        
+        if not isinstance(logits, Array) or not isinstance(target, Array):
+            raise TypeError("Inputs must be Array vectors! please check your inputs!.")
+        
+        loss_val = CrossEntropyLoss._cce(logits.data, target.data)
+        
         out = Array(loss_val, (logits, target), 'crossentropy', compute_grad= True)
 
         def _back():
             if logits.compute_grad == True:
-                logits.gradient = logits.gradient + (pred - target.data) / logits.shape[0]
+                logits.gradient = logits.gradient + CrossEntropyLoss._cce_grad(logits.data, target.data, out.gradient)
 
 
         out._back = _back

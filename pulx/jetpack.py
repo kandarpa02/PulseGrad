@@ -4,7 +4,6 @@ import numpy as np
 class Jet:
     def __init__(self, modules:list):
         self.modules = modules
-        self.parameters = {k:v.data for k,v in self.param().items()}
 
     def __call__(self, x):
         x = n.Array(x)
@@ -33,7 +32,7 @@ class Jet:
                     params[f"{module.__class__.__name__}{i}_{name}"] = val
             else:
                 try:
-                    params[f'{module.__class__.__name__}{i}_weight'] = module.weight
+                    params[f'{module.__class__.__name__}{i}_weights'] = module.weights
                     params[f'{module.__class__.__name__}{i}_bias'] = module.bias
                 except AttributeError:
                     pass
@@ -60,7 +59,7 @@ class Jet:
         for i, layer in enumerate(self.modules):
             lines.append(f"{i+1}. {layer}")
             try:
-                w, b = layer.weight.data, layer.bias.data
+                w, b = layer.weights.data, layer.bias.data
                 total_params += w.size + b.size
             except AttributeError:
                 pass
