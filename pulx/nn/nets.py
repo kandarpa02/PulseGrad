@@ -1,4 +1,4 @@
-import pulx.nume as n
+import pulx.pulx as n
 import jax.numpy as jnp
 from jax import random, lax
 
@@ -67,7 +67,7 @@ class Conv2D:
     def __call__(self, x):
         if not isinstance(x, n.Array):
             x = n.Array(x)
-        data = x.data               # shape (N, C, H, W)
+        data = x.data             # shape (N, C, H, W)
 
         nhwc = jnp.transpose(data, (0, 2, 3, 1))  # -> (N, H, W, C)
 

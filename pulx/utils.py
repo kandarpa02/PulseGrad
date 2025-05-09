@@ -1,4 +1,4 @@
-from pulx.nume import Array
+from pulx import Array
 import jax.numpy as jnp
 
 class TanH:

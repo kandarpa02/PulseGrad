@@ -7,11 +7,17 @@ class Array:
     def __init__(self, data, _children=[], op='', compute_grad = False, shape = 1):
         self.data = jnp.array(data) if isinstance(data, (list, int, float)) else data
         self.shape = self.data.shape if isinstance(self.data, jnp.ndarray) else shape
-        self.gradient = jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
+        self.compute_grad = compute_grad
+        self.gradient = None if self.compute_grad == False else jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
         self._back = lambda: None
         self.stored = list(_children)
         self.op = op
-        self.compute_grad = compute_grad
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        return self.data[index]
 
     def __repr__(self):
 
@@ -54,7 +60,8 @@ class Array:
     @jit
     def _add(a, b): 
         return a + b
-
+    
+    
     def __add__(self, other):
         added = Array._add(self.data, other.data)
         out = Array(added, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
@@ -99,7 +106,7 @@ class Array:
         out._back = _back
         return out
 
-
+  
     def mean(self, axis=None, keepdims=False):
         if not isinstance(self, Array):
             self = Array(self)
@@ -124,7 +131,7 @@ class Array:
     @jit
     def _mul(a, b):
         return a * b 
-    
+   
     def __mul__(self, other):
         multiplied = Array._mul(self.data, other.data)
         out = Array(multiplied, (self, other), '*', compute_grad=True)
@@ -142,12 +149,21 @@ class Array:
     @jit
     def _div(a, b):
         return a / b
+    @staticmethod
+    @jit
+    def _div_grad(a, b, out_grad):
+        self_grad = out_grad * (1 / b)
+        other_grad = out_grad * (-a / (b ** 2))
+        return self_grad, other_grad
+    
     def __truediv__(self, other):
         div = Array._div(self.data, other.data)
         out = Array(div, (self, other), '/', compute_grad=True)
+
         def _back():
-            self.gradient = self.gradient + out.gradient * (1 / other.data)
-            other.gradient = other.gradient + (out.gradient * (-self.data / (other.data ** 2)))
+            self_grad, other_grad = Array._dev_grad(self.data, other.data, out.gradient)
+            self.gradient = self.gradient + self_grad
+            other.gradient = other.gradient + other_grad
         out._back = _back
         return out
 
@@ -155,33 +171,49 @@ class Array:
     @jit
     def _pow(x, a):
         return x ** a
+    @staticmethod
+    @jit
+    def _pow_grad(a, b, out_grad):
+        self_grad = out_grad * b * (a ** (b-1))
+        other_grad = out_grad * (a ** b) * jnp.log(a)
+        return self_grad, other_grad
+    
     def __pow__(self, other):
         power = Array._pow(self.data, other.data)
         out = Array(power, (self, other), '**', compute_grad=True)
         
         def _back():
-            self.gradient += out.gradient * other.data * (self.data ** (other.data - 1))
-            other.gradient += out.gradient * (self.data ** other.data) * jnp.log(self.data)
+            self_grad, other_grad = Array._pow_grad(self.data, other.data, out.gradient)
+            self.gradient = self.gradient + self_grad
+            other.gradient = other.gradient + other_grad
         out._back = _back
         return out
+
 
     @staticmethod
     @jit
     def _matmul_jit(a: jnp.ndarray, b: jnp.ndarray):
         return jnp.matmul(a, b)
     
-    def __matmul__(self, other):
+    @staticmethod
+    @jit
+    def _matmul_grad(a:jnp.ndarray, b:jnp.ndarray, out_grad:jnp.ndarray):
+        self_grad = jnp.matmul(out_grad, b.T)
+        other_grad = jnp.matmul(a.T, out_grad)
+        return self_grad, other_grad
 
+    def __matmul__(self, other):
         a = (self.data if isinstance(self.data, jnp.ndarray)
          else jnp.array(self.data))
         b = (other.data if isinstance(other.data, jnp.ndarray)
             else jnp.array(other.data))
         
-        result = self._matmul_jit(a, b)
+        result = Array._matmul_jit(a, b)
         out = Array(result, (self, other), '@', compute_grad=True, shape=(a.shape[0], b.shape[1]))
         def _back():
-            self.gradient = self.gradient + jnp.matmul(out.gradient, other.data.T)
-            other.gradient = other.gradient + jnp.matmul(self.data.T, out.gradient)
+            self_grad, other_grad = Array._matmul_grad(a, b, out.gradient)
+            self.gradient = self.gradient + self_grad
+            other.gradient = other.gradient + other_grad
 
         out._back = _back
         return out
@@ -191,7 +223,7 @@ class Array:
             return Array(self.data.T, (self,), 'transpose')
         else:
             raise TypeError("I am sorry scalar value cannot be transposed")
-
+   
     def backprop(self):
         self.gradient = jnp.ones_like(self.data) if isinstance(self.data, jnp.ndarray) else 1
         topo = []
@@ -244,3 +276,5 @@ def zeros_like(x):
 def full(shape, fill):
     x = Array(jnp.full(shape, fill))
     return x
+
+# def argmax()

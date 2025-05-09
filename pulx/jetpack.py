@@ -1,4 +1,4 @@
-import pulx.nume as n
+import pulx as n
 import numpy as np
 
 class Jet:
