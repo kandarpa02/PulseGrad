@@ -4,7 +4,7 @@ import numpy as np
 class Jet:
     def __init__(self, modules:list):
         self.modules = modules
-
+        self.parameters = self.param
     def __call__(self, x):
         x = n.Array(x)
         for module in self.modules:
