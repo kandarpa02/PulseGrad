@@ -32,8 +32,8 @@ class Jet:
                     params[f"{module.__class__.__name__}{i}_{name}"] = val
             else:
                 try:
-                    params[f'{module.__class__.__name__}{i}_weights'] = module.weights
-                    params[f'{module.__class__.__name__}{i}_bias'] = module.bias
+                    params[f'{module.__class__.__name__}{i}_weights'] = module.weights.data
+                    params[f'{module.__class__.__name__}{i}_bias'] = module.bias.data
                 except AttributeError:
                     pass
         return params
