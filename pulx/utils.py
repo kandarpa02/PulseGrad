@@ -218,8 +218,10 @@ class CrossEntropyLoss:
 
     def __call__(self, logits, target): # pass logits not softmax values
         
-        if not isinstance(logits, Array) or not isinstance(target, Array):
-            raise TypeError("Inputs must be Array vectors! please check your inputs!.")
+        if not isinstance(logits, Array):
+            logits = Array(logits)
+        if not isinstance(target, Array):
+            target = Array(target)
         
         loss_val = CrossEntropyLoss._cce(logits.data, target.data)
         

@@ -1,18 +1,33 @@
 import jax.numpy as jnp
 from jax import jit
-import jax.random as random
+import jax
 from functools import partial
+from pulx.ops import xlrt
+from typing import Union, Callable, List
 
 class Array:
-    def __init__(self, data, _children=[], op='', compute_grad = False, shape = 1):
+    __slots__ = ('data', 'shape', 'compute_grad', 'gradient', '_back', 'stored', 'op')
+
+    def __init__(
+        self,
+        data: Union[list, int, float, jnp.ndarray],
+        _children: List['Array'] = None,
+        op: str = '',
+        compute_grad: bool = False,
+        shape = 1
+    ):
+        if _children is None:
+            _children = []
+
         self.data = jnp.array(data) if isinstance(data, (list, int, float)) else data
         self.shape = self.data.shape if isinstance(self.data, jnp.ndarray) else shape
         self.compute_grad = compute_grad
-        self.gradient = None if self.compute_grad == False else jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
-        self._back = lambda: None
+        self.gradient = jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
+        self._back: Callable[[], None] = lambda: None
         self.stored = list(_children)
         self.op = op
-    
+
+
     def __len__(self):
         return len(self.data)
     
@@ -20,7 +35,6 @@ class Array:
         return self.data[index]
 
     def __repr__(self):
-
         prefix = "Array("
         def fmt_row(row):
             return "[" + ", ".join(f"{v}" for v in row) + "]"
@@ -56,14 +70,9 @@ class Array:
             return f"{prefix}{body}, compute_grad: {'enabled' if self.compute_grad else 'disabled'})"
         return f"{prefix}{self.data}, compute_grad: {'enabled' if self.compute_grad else 'disabled'})"
 
-    @staticmethod
-    @jit
-    def _add(a, b): 
-        return a + b
-    
-    
+
     def __add__(self, other):
-        added = Array._add(self.data, other.data)
+        added = xlrt.call('add', self.data, other.data)
         out = Array(added, (self, other), '+', compute_grad=self.compute_grad or other.compute_grad)
         
         def _back():
@@ -127,80 +136,53 @@ class Array:
         out._back = _back
         return out
 
-    @staticmethod
-    @jit
-    def _mul(a, b):
-        return a * b 
    
     def __mul__(self, other):
-        multiplied = Array._mul(self.data, other.data)
+        multiplied = xlrt.call('mul', self.data, other.data)
         out = Array(multiplied, (self, other), '*', compute_grad=True)
         
         def _back():
             if self.compute_grad:
-                self.gradient = self.gradient + (out.gradient * other.data)
-                other.gradient = other.gradient + (out.gradient * self.data)
+                self_grad, other_grad = xlrt.call('mul', self.data, other.data, out.gradient)
+                self.gradient = self.gradient + self_grad
+                other.gradient = other.gradient + other_grad
             else:
                 raise ValueError("Please activate your Sharingan! You did not set 'compute_grad = True' before backprop")
         out._back = _back
         return out
     
-    @staticmethod
-    @jit
-    def _div(a, b):
-        return a / b
-    @staticmethod
-    @jit
-    def _div_grad(a, b, out_grad):
-        self_grad = out_grad * (1 / b)
-        other_grad = out_grad * (-a / (b ** 2))
-        return self_grad, other_grad
-    
+
     def __truediv__(self, other):
-        div = Array._div(self.data, other.data)
+        div = xlrt.call('div', self.data, other.data)
         out = Array(div, (self, other), '/', compute_grad=True)
 
         def _back():
-            self_grad, other_grad = Array._dev_grad(self.data, other.data, out.gradient)
-            self.gradient = self.gradient + self_grad
-            other.gradient = other.gradient + other_grad
+            if self.compute_grad:
+                self_grad, other_grad = xlrt.call('div', self.data, other.data, out.gradient)
+                self.gradient = self.gradient + self_grad
+                other.gradient = other.gradient + other_grad
+            else:
+                raise ValueError("Please activate your Sharingan! You did not set 'compute_grad = True' before backprop")
+            
         out._back = _back
         return out
 
-    @staticmethod
-    @jit
-    def _pow(x, a):
-        return x ** a
-    @staticmethod
-    @jit
-    def _pow_grad(a, b, out_grad):
-        self_grad = out_grad * b * (a ** (b-1))
-        other_grad = out_grad * (a ** b) * jnp.log(a)
-        return self_grad, other_grad
     
     def __pow__(self, other):
-        power = Array._pow(self.data, other.data)
+        power = xlrt.call('pow', self.data, other.data)
         out = Array(power, (self, other), '**', compute_grad=True)
         
         def _back():
-            self_grad, other_grad = Array._pow_grad(self.data, other.data, out.gradient)
-            self.gradient = self.gradient + self_grad
-            other.gradient = other.gradient + other_grad
+            if self.compute_grad:
+                self_grad, other_grad = xlrt.call('div', self.data, other.data, out.gradient)
+                self.gradient = self.gradient + self_grad
+                other.gradient = other.gradient + other_grad
+            else:
+                raise ValueError("Please activate your Sharingan! You did not set 'compute_grad = True' before backprop")
+            
         out._back = _back
         return out
 
-
-    @staticmethod
-    @jit
-    def _matmul_jit(a: jnp.ndarray, b: jnp.ndarray):
-        return jnp.matmul(a, b)
-    
-    @staticmethod
-    @jit
-    def _matmul_grad(a:jnp.ndarray, b:jnp.ndarray, out_grad:jnp.ndarray):
-        self_grad = jnp.matmul(out_grad, b.T)
-        other_grad = jnp.matmul(a.T, out_grad)
-        return self_grad, other_grad
 
     def __matmul__(self, other):
         a = (self.data if isinstance(self.data, jnp.ndarray)
@@ -208,12 +190,16 @@ class Array:
         b = (other.data if isinstance(other.data, jnp.ndarray)
             else jnp.array(other.data))
         
-        result = Array._matmul_jit(a, b)
+        result = xlrt.call('matmul', self.data, other.data)
         out = Array(result, (self, other), '@', compute_grad=True, shape=(a.shape[0], b.shape[1]))
+
         def _back():
-            self_grad, other_grad = Array._matmul_grad(a, b, out.gradient)
-            self.gradient = self.gradient + self_grad
-            other.gradient = other.gradient + other_grad
+            if self.compute_grad:
+                self_grad, other_grad = xlrt.call('matmul', self.data, other.data, out.gradient)
+                self.gradient = self.gradient + self_grad
+                other.gradient = other.gradient + other_grad
+            else:
+                raise ValueError("Please activate your Sharingan! You did not set 'compute_grad = True' before backprop")
 
         out._back = _back
         return out
@@ -241,11 +227,11 @@ class Array:
 
 class random:
     @staticmethod
-    def randn(m, n):
-        key = random.PRNGKey(0)
-        k1, _ = random.split(key)
+    def normal(m, n):
+        key = jax.random.PRNGKey(42)
+        k1, _ = jax.random.split(key)
         t = (m, n)
-        out = random.normal(k1, t)
+        out = jax.random.normal(k1, t)
         return Array(out, shape=t)
 
 def matmul(a, b):
@@ -277,4 +263,7 @@ def full(shape, fill):
     x = Array(jnp.full(shape, fill))
     return x
 
-# def argmax()
+def argmax(x, axis:int=None, keepdims:bool=None):
+    if isinstance(x, Array):
+        x = x.data
+    return jnp.argmax(x, axis=axis, keepdims=keepdims)
