@@ -27,6 +27,8 @@ class Array:
         self.stored = list(_children)
         self.op = op
 
+    def to_device(self):
+        return Array(jax.device_put(self.data, device), compute_grad=self.compute_grad)
 
     def __len__(self):
         return len(self.data)

@@ -1,10 +1,11 @@
 import pulx as n
 import numpy as np
-
+import jax
 class Jet:
     def __init__(self, modules:list):
         self.modules = modules
         self.parameters = self.param()
+
     def __call__(self, x):
         x = n.Array(x)
         for module in self.modules:
@@ -23,7 +24,10 @@ class Jet:
                 else:
                     module.train = False
 
-    def param(self):
+    def param(self, device=None):
+        if device is None:
+            device = jax.devices("gpu")[0] if jax.devices("gpu") else jax.devices("cpu")[0]
+
         params = {}
         for i, module in enumerate(self.modules):
             if hasattr(module, 'param'):
@@ -32,8 +36,8 @@ class Jet:
                     params[f"{module.__class__.__name__}{i}_{name}"] = val
             else:
                 try:
-                    params[f'{module.__class__.__name__}{i}_weights'] = module.weights
-                    params[f'{module.__class__.__name__}{i}_bias'] = module.bias
+                    params[f'{module.__class__.__name__}{i}_weights'] = module.weights.to_device(device)
+                    params[f'{module.__class__.__name__}{i}_bias'] = module.bias.to_device(device)
                 except AttributeError:
                     pass
         return params
