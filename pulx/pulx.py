@@ -14,18 +14,21 @@ class Array:
         _children: List['Array'] = None,
         op: str = '',
         compute_grad: bool = False,
-        shape = 1
+        shape = 1,
+        device = None
     ):
         if _children is None:
             _children = []
-
-        self.data = jnp.array(data) if isinstance(data, (list, int, float)) else data
+        device = device or (jax.devices("gpu")[0] if jax.devices("gpu") else jax.devices("cpu")[0])
+        self_data = jnp.array(data) if isinstance(data, (list, int, float)) else data
+        self.data = jax.device_put(self_data, device)
         self.shape = self.data.shape if isinstance(self.data, jnp.ndarray) else shape
         self.compute_grad = compute_grad
         self.gradient = jnp.zeros_like(self.data, dtype=jnp.float32) if isinstance(self.data, jnp.ndarray) else 0
         self._back: Callable[[], None] = lambda: None
         self.stored = list(_children)
         self.op = op
+        
 
     def to_device(self, device):
         return Array(jax.device_put(self.data, device), compute_grad=self.compute_grad)
